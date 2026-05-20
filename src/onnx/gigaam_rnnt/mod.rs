@@ -89,15 +89,18 @@ impl GigaAMRNNTModel {
             BLANK_ID
         );
 
+        // GigaAM v3 E2E RNNT feature extraction config
+        // Source: sherpa-onnx IsGigaAM() override + GigaAM official repo
+        // https://github.com/salute-developers/GigaAM/blob/main/gigaam/preprocess.py#L68
         let mel_config = MelConfig {
             sample_rate: 16000,
             num_mels: 64,
-            n_fft: 320,
+            n_fft: 400,        // was 320 (incorrect); GigaAM uses 400
             hop_length: 160,
             window: WindowType::Hann,
             f_min: 0.0,
             f_max: Some(8000.0),
-            pre_emphasis: None,
+            pre_emphasis: None,  // GigaAM uses pre_emph_coeff=0
             snip_edges: false,
             normalize_samples: true,
         };
