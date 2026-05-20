@@ -147,6 +147,7 @@ fn compute_fbank(samples: &[f32], config: &MelConfig, sr: f32, f_max: f32) -> Ar
 }
 
 /// Standard mel spectrogram (GigaAM-style): windowed STFT + mel filterbank + log.
+/// Uses centered frames (matching torchaudio's center=True) with zero-padding.
 /// Returns [num_frames, num_mels].
 fn compute_mel_spectrogram(
     samples: &[f32],
@@ -161,7 +162,14 @@ fn compute_mel_spectrogram(
         return Array2::zeros((0, config.num_mels));
     }
 
-    let n_frames = (samples.len() - n_fft) / hop_length + 1;
+    // Center padding: pad signal with n_fft/2 zeros on each side,
+    // matching torchaudio's center=True behavior.
+    let pad = n_fft / 2;
+    let mut padded = vec![0.0f32; pad + samples.len() + pad];
+    padded[pad..pad + samples.len()].copy_from_slice(samples);
+
+    // Number of frames (centered, matching torchaudio)
+    let n_frames = (padded.len() - n_fft) / hop_length + 1;
     let freq_bins = n_fft / 2 + 1;
 
     let window = make_window(config.window, n_fft);
@@ -176,7 +184,7 @@ fn compute_mel_spectrogram(
     for frame_idx in 0..n_frames {
         let start = frame_idx * hop_length;
         let mut fft_buf: Vec<Complex<f32>> = (0..n_fft)
-            .map(|i| Complex::new(samples[start + i] * window[i], 0.0))
+            .map(|i| Complex::new(padded[start + i] * window[i], 0.0))
             .collect();
 
         fft.process(&mut fft_buf);
